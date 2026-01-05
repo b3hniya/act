@@ -1,0 +1,12 @@
+{
+  "name": "@act/components",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo Test"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

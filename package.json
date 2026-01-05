@@ -1,0 +1,35 @@
+{
+  "name": "act",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "dev:api": "turbo dev --filter=api-server",
+    "dev:dashboard": "turbo dev --filter=@act/dashboard",
+    "start:api": "turbo start --filter=api-server",
+    "lint": "turbo lint",
+    "test": "turbo test",
+    "format": "turbo format",
+    "typecheck": "turbo typecheck",
+    "clean": "turbo clean && rm -rf node_modules"
+  },
+  "dependencies": {
+    "@act/types": "workspace:*",
+    "zod": "^4.3.4"
+  },
+  "devDependencies": {
+    "turbo": "^2.7.2",
+    "typescript": "^5.9.3",
+    "@types/node": "^24.10.1",
+    "jest": "^30.0.0",
+    "ts-jest": "^29.2.5",
+    "@types/jest": "^30.0.0",
+    "prettier": "^3.4.2",
+    "eslint": "^9.39.1",
+    "@eslint/js": "^9.39.1",
+    "typescript-eslint": "^8.46.4",
+    "globals": "^16.5.0"
+  },
+  "packageManager": "pnpm@9.15.0"
+}
