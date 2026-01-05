@@ -1,0 +1,38 @@
+# Commit Message Format
+
+When writing commit messages, use the Conventional Commits format:
+
+```
+<type>(<scope>): <subject>
+
+<body>
+
+<footer>
+```
+
+## Allowed Types
+- `feat` - New feature
+- `fix` - Bug fix
+- `docs` - Documentation changes
+- `style` - Code style changes (formatting, semicolons, etc.)
+- `refactor` - Code refactoring (no new features or bug fixes)
+- `perf` - Performance improvements
+- `test` - Adding or updating tests
+- `chore` - Maintenance tasks (dependencies, configs)
+- `revert` - Reverting previous commits
+- `build` - Build system or external dependencies
+- `ci` - CI/CD configuration changes
+
+## Rules
+- Type is required and must be lowercase
+- Subject must be lowercase and not end with a period
+- Subject should be imperative mood ("add" not "added")
+- Body and footer are optional
+
+## Examples
+- `feat(auth): add user login functionality`
+- `fix(api): resolve null pointer in customer service`
+- `chore(deps): update typescript to 5.9`
+- `docs: update README with setup instructions`
+- `refactor(customer): simplify validation logic`
+
