@@ -17,6 +17,7 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "test": "jest",
+    "lint": "eslint . --fix",
     "format": "prettier --write \"**/*.ts\"",
     "typecheck": "tsc --noEmit"
   },

@@ -1,6 +1,6 @@
-import { z } from "zod";
+import { z } from 'zod';
 
-const customerSchema = z.object({
+export const customerSchema = z.object({
   id: z.string(),
   name: z.string(),
   email: z.string().email(),

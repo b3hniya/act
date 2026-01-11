@@ -1,31 +1,21 @@
 // @ts-check
-import eslint from '@eslint/js';
-import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
-import { commonRules } from '../../eslint.config.base.js';
+import { baseConfig, commonRules, prettierPlugin } from '../../eslint.config.base.js';
 
 export default tseslint.config(
-  {
-    ignores: ['eslint.config.mjs', 'dist/**'],
-  },
-  eslint.configs.recommended,
+  ...baseConfig,
   ...tseslint.configs.recommendedTypeChecked,
-  eslintPluginPrettierRecommended,
   {
+    files: ['**/*.ts'],
     languageOptions: {
-      globals: {
-        ...globals.node,
-        ...globals.jest,
-      },
-      sourceType: 'commonjs',
+      globals: { ...globals.node, ...globals.jest },
       parserOptions: {
         projectService: true,
         tsconfigRootDir: import.meta.dirname,
       },
     },
-  },
-  {
+    plugins: { ...prettierPlugin },
     rules: {
       ...commonRules,
       '@typescript-eslint/no-floating-promises': 'warn',

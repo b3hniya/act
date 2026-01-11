@@ -2,6 +2,7 @@
   "name": "act",
   "version": "0.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "build": "turbo build",
     "dev": "turbo dev",
@@ -30,6 +31,8 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^24.10.1",
     "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-prettier": "^5.2.2",
     "globals": "^16.5.0",
     "husky": "^9.1.7",
     "jest": "^30.0.0",

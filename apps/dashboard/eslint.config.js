@@ -1,14 +1,10 @@
-import js from '@eslint/js';
 import globals from 'globals';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
-import tseslint from 'typescript-eslint';
-import { commonRules } from '../../eslint.config.base.js';
+import { baseConfig, commonRules, prettierPlugin } from '../../eslint.config.base.js';
 
 export default [
-  { ignores: ['dist'] },
-  js.configs.recommended,
-  ...tseslint.configs.recommended,
+  ...baseConfig,
   {
     files: ['**/*.{ts,tsx}'],
     languageOptions: {
@@ -16,6 +12,7 @@ export default [
       globals: globals.browser,
     },
     plugins: {
+      ...prettierPlugin,
       'react-hooks': reactHooks,
       'react-refresh': reactRefresh,
     },
