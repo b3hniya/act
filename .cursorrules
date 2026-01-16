@@ -325,47 +325,142 @@ export class OnInvoiceAddedHandler implements IEventHandler<InvoiceAddedEvent> {
 
 ---
 
+## How to Add a New Database Schema
+
+Location: `libs/database/src/schema/<domain>/<name>.schema.ts`
+
+**Important:** 
+- Database schemas must align with types defined in `libs/types`
+- Each domain has its own PostgreSQL schema (e.g., `customer`, `invoice`)
+- All tables within a domain share the same PostgreSQL schema
+
+1. Create domain folder in `libs/database/src/schema/`:
+```
+libs/database/src/schema/<domain>/
+├── <domain>.schema.ts
+└── index.ts
+```
+
+2. Define the domain schema and tables:
+```typescript
+// product.schema.ts
+import { pgSchema, varchar, uuid, timestamp, numeric } from 'drizzle-orm/pg-core';
+
+// Define domain schema (PostgreSQL schema)
+export const productSchema = pgSchema('product');
+
+// All tables in this domain use the same schema
+export const products = productSchema.table('products', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: varchar('name', { length: 255 }).notNull(),
+  price: numeric('price', { precision: 10, scale: 2 }).notNull(),
+  description: varchar('description', { length: 1000 }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Additional tables in the same domain share the schema
+export const productHistory = productSchema.table('product_history', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  productId: uuid('product_id').notNull().references(() => products.id),
+  changeType: varchar('change_type', { length: 50 }).notNull(),
+  changedAt: timestamp('changed_at').defaultNow().notNull(),
+});
+```
+
+This creates:
+- `product.products` table
+- `product.product_history` table
+
+3. Export from domain index:
+```typescript
+// index.ts
+export * from './product.schema.js';
+```
+
+4. Add to schema index `libs/database/src/schema/index.ts`:
+```typescript
+export * from './product/index.js';
+```
+
+5. Generate migration:
+```bash
+pnpm --filter @act/database db:generate
+```
+
+**Schema-Type Relationship:**
+- Types in `libs/types` define the domain model (what the application works with)
+- Schemas in `libs/database` define the database structure (how data is stored)
+- Repositories map between database rows and domain types
+- Each domain gets its own PostgreSQL schema for isolation
+
+---
+
 ## How to Add a New Repository
 
 Location: `modules/<module>/repository/<name>.repository.ts`
 
+Repositories use Drizzle ORM with the `DRIZZLE` injection token from `@act/database`.
+
 ```typescript
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
+import { DRIZZLE, DrizzleDB, products, eq } from '@act/database';
+import { Product } from '@act/types';
 
 @Injectable()
-export class CustomerRepository {
-  private items: Customer[] = [];
+export class ProductRepository {
+  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDB) {}
 
-  async findAll(): Promise<Customer[]> {
-    return this.items;
+  async findAll(): Promise<Product[]> {
+    const result = await this.db.select().from(products);
+    return result.map(this.mapToProduct);
   }
 
-  async findById(id: string): Promise<Customer | null> {
-    return this.items.find(item => item.id === id) || null;
+  async findById(id: string): Promise<Product | null> {
+    const result = await this.db.select().from(products).where(eq(products.id, id));
+    return result[0] ? this.mapToProduct(result[0]) : null;
   }
 
-  async save(entity: Customer): Promise<Customer> {
-    this.items.push(entity);
-    return entity;
+  async create(data: Omit<Product, 'id'>): Promise<Product> {
+    const result = await this.db.insert(products).values(data).returning();
+    return this.mapToProduct(result[0]);
   }
 
-  async update(id: string, data: Partial<Customer>): Promise<Customer | null> {
-    const index = this.items.findIndex(item => item.id === id);
-    if (index === -1) return null;
-    this.items[index] = { ...this.items[index], ...data };
-    return this.items[index];
+  async update(id: string, data: Partial<Product>): Promise<Product | null> {
+    const result = await this.db
+      .update(products)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(products.id, id))
+      .returning();
+    return result[0] ? this.mapToProduct(result[0]) : null;
   }
 
   async delete(id: string): Promise<boolean> {
-    const index = this.items.findIndex(item => item.id === id);
-    if (index === -1) return false;
-    this.items.splice(index, 1);
-    return true;
+    const result = await this.db.delete(products).where(eq(products.id, id)).returning();
+    return result.length > 0;
+  }
+
+  private mapToProduct(row: typeof products.$inferSelect): Product {
+    return {
+      id: row.id,
+      name: row.name,
+      price: Number(row.price),
+      description: row.description ?? '',
+    };
   }
 }
 ```
 
-Register in module providers.
+Register in module:
+```typescript
+import { Module } from '@nestjs/common';
+import { ProductRepository } from '../repository';
+
+@Module({
+  providers: [ProductRepository],
+  exports: [ProductRepository],
+})
+export class ProductModule {}
 
 ---
 

@@ -23,7 +23,9 @@
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
-    "@act/types": "workspace:*"
+    "@nestjs/cqrs": "^11.0.0",
+    "@act/types": "workspace:*",
+    "@act/database": "workspace:*"
   },
   "peerDependencies": {
     "@nestjs/core": "^11.0.0",

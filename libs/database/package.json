@@ -1,12 +1,41 @@
 {
   "name": "@act/database",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Drizzle ORM database layer with domain-based schemas",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
   "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
     "test": "echo test"
   },
-  "keywords": [],
+  "dependencies": {
+    "drizzle-orm": "^0.44.0",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.10",
+    "drizzle-kit": "^0.30.4"
+  },
+  "peerDependencies": {
+    "@nestjs/common": "^11.0.0"
+  },
+  "keywords": [
+    "drizzle",
+    "database",
+    "postgresql"
+  ],
   "author": "",
   "license": "ISC"
 }
