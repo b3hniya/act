@@ -1,38 +1,433 @@
-# Commit Message Format
+# Act Monorepo - AI Contribution Guidelines
 
-When writing commit messages, use the Conventional Commits format:
+## Project Structure
+
+- `apps/` - Applications (api-server, dashboard)
+- `modules/` - Domain modules (customer, invoice, payment)
+- `libs/` - Shared libraries (types, components, database, events)
+
+## Commit Message Format
+
+Use Conventional Commits format:
 
 ```
 <type>(<scope>): <subject>
-
-<body>
-
-<footer>
 ```
 
-## Allowed Types
+### Allowed Types
 - `feat` - New feature
 - `fix` - Bug fix
 - `docs` - Documentation changes
-- `style` - Code style changes (formatting, semicolons, etc.)
-- `refactor` - Code refactoring (no new features or bug fixes)
+- `style` - Code style changes (formatting)
+- `refactor` - Code refactoring
 - `perf` - Performance improvements
 - `test` - Adding or updating tests
-- `chore` - Maintenance tasks (dependencies, configs)
-- `revert` - Reverting previous commits
-- `build` - Build system or external dependencies
-- `ci` - CI/CD configuration changes
+- `chore` - Maintenance tasks
+- `revert` - Reverting commits
+- `build` - Build system changes
+- `ci` - CI/CD changes
 
-## Rules
-- Type is required and must be lowercase
-- Subject must be lowercase and not end with a period
-- Subject should be imperative mood ("add" not "added")
-- Body and footer are optional
+### Rules
+- Type is required and lowercase
+- Subject is lowercase, no period, imperative mood
 
-## Examples
-- `feat(auth): add user login functionality`
-- `fix(api): resolve null pointer in customer service`
-- `chore(deps): update typescript to 5.9`
-- `docs: update README with setup instructions`
-- `refactor(customer): simplify validation logic`
+---
+
+## How to Add a New Module
+
+1. Create folder: `modules/<module-name>/`
+2. Create `package.json`:
+```json
+{
+  "name": "@act/<module-name>",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts"
+}
+```
+3. Create structure:
+```
+modules/<module-name>/
+├── api/
+│   ├── <module>.controller.ts
+│   ├── <module>.service.ts
+│   └── <module>.module.ts
+├── application/
+│   ├── command/
+│   ├── query/
+│   └── event-handler/
+├── repository/
+└── index.ts
+```
+4. Export from `index.ts`:
+```typescript
+export * from './api';
+```
+5. Register in `apps/api-server/src/app.module.ts`:
+```typescript
+import { NewModule } from '@act/<module-name>';
+@Module({ imports: [NewModule] })
+```
+6. Add `README.md` (see Documentation Guidelines below)
+
+---
+
+## Documentation Guidelines
+
+### Module README
+
+Module READMEs should focus on **business domain**, not technical implementation:
+
+**Include:**
+- Module purpose and responsibilities
+- Domain concepts and entities
+- Business rules
+- API endpoints (user-facing description)
+- Events (listens to / emits)
+- Related modules
+
+**Do NOT include:**
+- Peer dependencies
+- Folder structure
+- Development commands
+- Code examples for importing
+- Technical setup instructions
+
+Technical details belong in `.cursorrules` and `CONTRIBUTING.md`.
+
+---
+
+## How to Add a New Controller
+
+Location: `modules/<module>/api/<name>.controller.ts`
+
+```typescript
+import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import { GetCustomerListQuery } from '../application/query/get-customer-list/get-customer-list.query';
+import { GetCustomerByIdQuery } from '../application/query/get-customer-by-id/get-customer-by-id.query';
+import { AddCustomerCommand } from '../application/command/add-customer/add-customer.command';
+
+@Controller('<route>')
+export class NameController {
+  constructor(
+    private readonly commandBus: CommandBus,
+    private readonly queryBus: QueryBus,
+  ) {}
+
+  @Get()
+  async findAll() {
+    return this.queryBus.execute(new GetCustomerListQuery());
+  }
+
+  @Get(':id')
+  async findOne(@Param('id') id: string) {
+    return this.queryBus.execute(new GetCustomerByIdQuery(id));
+  }
+
+  @Post()
+  async create(@Body() dto: CreateDto) {
+    return this.commandBus.execute(new AddCustomerCommand(dto.name, dto.email));
+  }
+}
+```
+
+Register in module:
+```typescript
+import { CqrsModule } from '@nestjs/cqrs';
+
+@Module({
+  imports: [CqrsModule],
+  controllers: [NameController],
+})
+```
+
+---
+
+## How to Add Endpoint to Existing Controller
+
+Add method with decorator, using CommandBus/QueryBus:
+```typescript
+@Get('search')
+async search(@Query('q') query: string) {
+  return this.queryBus.execute(new SearchCustomerQuery(query));
+}
+
+@Put(':id')
+async update(@Param('id') id: string, @Body() dto: UpdateDto) {
+  return this.commandBus.execute(new UpdateCustomerCommand(id, dto));
+}
+
+@Delete(':id')
+async remove(@Param('id') id: string) {
+  return this.commandBus.execute(new DeleteCustomerCommand(id));
+}
+```
+
+---
+
+## How to Add a New Service (Facade/ACL)
+
+Services act as a **Facade** and **Anti-Corruption Layer (ACL)** - they are the boundary between your module and external systems or other modules. Use them to:
+- Integrate with external APIs
+- Communicate with other modules
+- Abstract third-party libraries
+- Transform external data to domain models
+
+Location: `modules/<module>/api/<name>.service.ts`
+
+```typescript
+import { Injectable } from '@nestjs/common';
+
+@Injectable()
+export class PaymentGatewayService {
+  constructor(private readonly httpService: HttpService) {}
+
+  async processPayment(amount: number, customerId: string): Promise<PaymentResult> {
+    // Facade: abstracts external payment provider
+    const response = await this.httpService.post('https://payment-api.com/charge', {
+      amount,
+      customer: customerId,
+    });
+    
+    // ACL: transforms external response to domain model
+    return {
+      transactionId: response.data.id,
+      status: this.mapStatus(response.data.status),
+    };
+  }
+
+  private mapStatus(externalStatus: string): PaymentStatus {
+    // Anti-corruption: map external values to domain values
+    const statusMap = {
+      'COMPLETED': PaymentStatus.Success,
+      'FAILED': PaymentStatus.Failed,
+      'PENDING': PaymentStatus.Pending,
+    };
+    return statusMap[externalStatus] ?? PaymentStatus.Unknown;
+  }
+}
+```
+
+Register in module:
+```typescript
+@Module({
+  providers: [PaymentGatewayService],
+  exports: [PaymentGatewayService],
+})
+```
+
+**Note:** Controllers use CommandBus/QueryBus for domain operations. Services are for external integrations only.
+
+---
+
+## How to Add a New Command (CQRS)
+
+Location: `modules/<module>/application/command/<command-name>/`
+
+1. Create command class:
+```typescript
+// add-customer.command.ts
+export class AddCustomerCommand {
+  constructor(
+    public readonly name: string,
+    public readonly email: string,
+  ) {}
+}
+```
+
+2. Create handler:
+```typescript
+// add-customer.handler.ts
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { AddCustomerCommand } from './add-customer.command';
+
+@CommandHandler(AddCustomerCommand)
+export class AddCustomerHandler implements ICommandHandler<AddCustomerCommand> {
+  async execute(command: AddCustomerCommand) {
+    const { name, email } = command;
+    // Implementation
+  }
+}
+```
+
+3. Export from `application/index.ts`
+
+---
+
+## How to Add a New Query (CQRS)
+
+Location: `modules/<module>/application/query/<query-name>/`
+
+1. Create query class:
+```typescript
+// get-customer-list.query.ts
+export class GetCustomerListQuery {
+  constructor(
+    public readonly page: number = 1,
+    public readonly limit: number = 10,
+  ) {}
+}
+```
+
+2. Create handler:
+```typescript
+// get-customer-list.handler.ts
+import { QueryHandler, IQueryHandler } from '@nestjs/cqrs';
+import { GetCustomerListQuery } from './get-customer-list.query';
+
+@QueryHandler(GetCustomerListQuery)
+export class GetCustomerListHandler implements IQueryHandler<GetCustomerListQuery> {
+  async execute(query: GetCustomerListQuery) {
+    const { page, limit } = query;
+    // Implementation
+    return [];
+  }
+}
+```
+
+---
+
+## How to Add a New Event Handler
+
+Location: `modules/<module>/application/event-handler/<event-name>/`
+
+**Important:** Event handlers must NOT directly access the database or perform business logic. They should only dispatch commands or queries.
+
+```typescript
+// on-invoice-added.handler.ts
+import { EventsHandler, IEventHandler } from '@nestjs/cqrs';
+import { CommandBus } from '@nestjs/cqrs';
+import { InvoiceAddedEvent } from '@act/events';
+import { UpdateCustomerDueCommand } from '../command/update-customer-due/update-customer-due.command';
+
+@EventsHandler(InvoiceAddedEvent)
+export class OnInvoiceAddedHandler implements IEventHandler<InvoiceAddedEvent> {
+  constructor(private readonly commandBus: CommandBus) {}
+
+  async handle(event: InvoiceAddedEvent) {
+    const { invoiceId, customerId, amount } = event;
+    
+    // Dispatch command - do NOT access database directly
+    await this.commandBus.execute(
+      new UpdateCustomerDueCommand(customerId, amount)
+    );
+  }
+}
+```
+
+**Rules for Event Handlers:**
+- Use `CommandBus` to trigger write operations
+- Use `QueryBus` to fetch data if needed
+- Never inject repositories directly
+- Never perform database operations directly
+- Keep handlers thin - they orchestrate, not implement
+
+---
+
+## How to Add a New Repository
+
+Location: `modules/<module>/repository/<name>.repository.ts`
+
+```typescript
+import { Injectable } from '@nestjs/common';
+
+@Injectable()
+export class CustomerRepository {
+  private items: Customer[] = [];
+
+  async findAll(): Promise<Customer[]> {
+    return this.items;
+  }
+
+  async findById(id: string): Promise<Customer | null> {
+    return this.items.find(item => item.id === id) || null;
+  }
+
+  async save(entity: Customer): Promise<Customer> {
+    this.items.push(entity);
+    return entity;
+  }
+
+  async update(id: string, data: Partial<Customer>): Promise<Customer | null> {
+    const index = this.items.findIndex(item => item.id === id);
+    if (index === -1) return null;
+    this.items[index] = { ...this.items[index], ...data };
+    return this.items[index];
+  }
+
+  async delete(id: string): Promise<boolean> {
+    const index = this.items.findIndex(item => item.id === id);
+    if (index === -1) return false;
+    this.items.splice(index, 1);
+    return true;
+  }
+}
+```
+
+Register in module providers.
+
+---
+
+## How to Add a New Type/Schema
+
+Location: `libs/types/<domain>/<name>.type.ts`
+
+```typescript
+import { z } from 'zod';
+
+export const productSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  price: z.number().positive(),
+  description: z.string().optional(),
+});
+
+export type Product = z.infer<typeof productSchema>;
+```
+
+Export from `libs/types/<domain>/index.ts` and `libs/types/index.ts`.
+
+---
+
+## How to Add Unit Tests
+
+Location: Same folder as source, with `.spec.ts` suffix
+
+```typescript
+// customer.service.spec.ts
+import { Test, TestingModule } from '@nestjs/testing';
+import { CustomerService } from './customer.service';
+
+describe('CustomerService', () => {
+  let service: CustomerService;
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [CustomerService],
+    }).compile();
+
+    service = module.get<CustomerService>(CustomerService);
+  });
+
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
+
+  describe('findAll', () => {
+    it('should return array', async () => {
+      const result = await service.findAll();
+      expect(Array.isArray(result)).toBe(true);
+    });
+  });
+});
+```
+
+---
+
+## Dependency Rules
+
+- Do NOT add packages already in root `package.json`
+- Use `@act/*` for internal packages (e.g., `@act/types`, `@act/customer`)
+- Use peer dependencies for NestJS core packages in modules
 
