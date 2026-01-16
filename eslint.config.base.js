@@ -13,7 +13,7 @@ export const ignores = ['**/dist/**', '**/node_modules/**', '**/.turbo/**', '**/
  */
 export const commonRules = {
   '@typescript-eslint/no-explicit-any': 'warn',
-  '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+  '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
   '@typescript-eslint/no-empty-function': 'warn',
   'prettier/prettier': 'error',
 };

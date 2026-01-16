@@ -1,0 +1,41 @@
+{
+  "name": "@act/event-graph",
+  "version": "1.0.0",
+  "description": "CQRS event flow visualizer for NestJS applications",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "start": "tsx src/cli.ts",
+    "dev": "vite",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@xyflow/react": "^12.4.4",
+    "dagre": "^0.8.5",
+    "express": "^4.21.2",
+    "glob": "^11.0.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/dagre": "^0.7.52",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "open": "^10.1.0",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "tsx": "^4.19.2",
+    "vite": "^6.0.7"
+  },
+  "keywords": [
+    "cqrs",
+    "event-graph",
+    "visualization",
+    "nestjs"
+  ]
+}

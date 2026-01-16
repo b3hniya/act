@@ -17,7 +17,8 @@
     "prepare": "husky",
     "changeset": "changeset",
     "version": "changeset version",
-    "release": "pnpm build && changeset publish"
+    "release": "pnpm build && changeset publish",
+    "event-graph": "pnpm --filter @act/event-graph start"
   },
   "dependencies": {
     "@act/types": "workspace:*",
